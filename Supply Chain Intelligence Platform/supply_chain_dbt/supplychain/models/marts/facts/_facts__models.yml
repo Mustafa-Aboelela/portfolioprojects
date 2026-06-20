@@ -1,0 +1,162 @@
+version: 2
+
+models:
+  - name: fct_trip
+    description: "Core transaction fact table. One row per trip. Joins loads for revenue, fuel purchases for cost, and all dimensions for analytical slicing. Grain: one trip = one load movement from origin to destination."
+    columns:
+      - name: trip_key
+        description: "Surrogate primary key generated from trip_id."
+        tests:
+          - unique
+          - not_null
+      - name: trip_id
+        description: "Natural key from source system - use for traceability back to stg_trips."
+        tests:
+          - unique
+          - not_null
+      - name: driver_key
+        description: "Foreign key to dim_driver surrogate key."
+      - name: truck_key
+        description: "Foreign key to dim_truck surrogate key."
+      - name: trailer_key
+        description: "Foreign key to dim_trailer surrogate key."
+      - name: customer_key
+        description: "Foreign key to dim_customer surrogate key."
+      - name: route_key
+        description: "Foreign key to dim_route surrogate key."
+      - name: dispatch_date_key
+        description: "Foreign key to dim_date surrogate key on dispatch date."
+      - name: total_revenue
+        description: "Total revenue = base revenue + fuel surcharge + accessorial charges."
+      - name: gross_margin
+        description: "Approximate margin = total revenue minus fuel cost. Does not include driver pay or maintenance costs."
+      - name: revenue_per_mile
+        description: "Total revenue divided by actual distance miles. Null if distance is zero."
+      - name: fuel_cost_per_mile
+        description: "Total fuel cost divided by actual distance miles. Null if distance is zero."
+
+  - name: fct_delivery
+    description: "Transaction fact table. One row per delivery event (pickup or dropoff). Tracks on-time performance, detention, and arrival variance at facility level. Grain: one event = one scheduled pickup or delivery at a facility."
+    columns:
+      - name: delivery_event_key
+        description: "Surrogate primary key generated from event_id."
+        tests:
+          - unique
+          - not_null
+      - name: event_id
+        description: "Natural key from source system."
+        tests:
+          - unique
+          - not_null
+      - name: facility_key
+        description: "Foreign key to dim_facility surrogate key."
+      - name: customer_key
+        description: "Foreign key to dim_customer surrogate key."
+      - name: route_key
+        description: "Foreign key to dim_route surrogate key."
+      - name: event_date_key
+        description: "Foreign key to dim_date on actual event date."
+      - name: on_time_flag
+        description: "Boolean - true if event occurred at or before scheduled datetime."
+      - name: on_time_count
+        description: "Integer version of on_time_flag (1=on time, 0=late). Use SUM for on-time rate calculations."
+      - name: detention_minutes
+        description: "Minutes the truck was held at facility beyond scheduled time."
+      - name: arrival_variance_minutes
+        description: "Difference in minutes between actual and scheduled datetime. Negative = early, positive = late."
+
+  - name: fct_fuel_purchase
+    description: "Transaction fact table. One row per fuel purchase transaction. Tracks fuel cost, volume, and price per gallon by truck, driver, and location. Grain: one fuel card swipe at one fuel station."
+    columns:
+      - name: fuel_purchase_key
+        description: "Surrogate primary key generated from fuel_purchase_id."
+        tests:
+          - unique
+          - not_null
+      - name: fuel_purchase_id
+        description: "Natural key from source system."
+        tests:
+          - unique
+          - not_null
+      - name: trip_id
+        description: "Natural key - traceability back to stg_trips. Not a surrogate key join."
+      - name: truck_key
+        description: "Foreign key to dim_truck surrogate key."
+      - name: driver_key
+        description: "Foreign key to dim_driver surrogate key."
+      - name: fuel_purchase_date_key
+        description: "Foreign key to dim_date on purchase date."
+      - name: gallons
+        description: "Volume of fuel purchased in gallons."
+      - name: price_per_gallon
+        description: "Unit price at time of purchase. Useful for fuel price trend analysis."
+      - name: total_cost
+        description: "Total cost of this fuel purchase = gallons x price_per_gallon."
+
+  - name: fct_maintenance
+    description: "Transaction fact table. One row per maintenance event on a truck. Tracks labor, parts, and total cost plus downtime. Grain: one maintenance work order for one truck."
+    columns:
+      - name: maintenance_key
+        description: "Surrogate primary key generated from maintenance_id."
+        tests:
+          - unique
+          - not_null
+      - name: maintenance_id
+        description: "Natural key from source system."
+        tests:
+          - unique
+          - not_null
+      - name: truck_key
+        description: "Foreign key to dim_truck surrogate key."
+      - name: maintenance_date_key
+        description: "Foreign key to dim_date on maintenance date."
+      - name: odometer_reading
+        description: "Truck odometer at time of service. Semi-additive - do not SUM across records."
+      - name: labor_cost
+        description: "Cost of labor for this maintenance event."
+      - name: parts_cost
+        description: "Cost of parts for this maintenance event."
+      - name: total_cost
+        description: "Total maintenance cost = labor + parts."
+      - name: downtime_hours
+        description: "Hours the truck was out of service for this maintenance event."
+
+  - name: fct_safety_incident
+    description: "Transaction fact table. One row per safety incident. Tracks financial impact, fault, injury, and preventability flags. Grain: one reported safety incident involving a truck and/or driver."
+    columns:
+      - name: safety_incident_key
+        description: "Surrogate primary key generated from incident_id."
+        tests:
+          - unique
+          - not_null
+      - name: incident_id
+        description: "Natural key from source system."
+        tests:
+          - unique
+          - not_null
+      - name: truck_key
+        description: "Foreign key to dim_truck surrogate key."
+      - name: driver_key
+        description: "Foreign key to dim_driver surrogate key."
+      - name: incident_date_key
+        description: "Foreign key to dim_date on incident date."
+      - name: at_fault_flag
+        description: "Boolean - true if driver/company was at fault."
+      - name: at_fault_count
+        description: "Integer version of at_fault_flag. Use SUM for at-fault incident rate calculations."
+      - name: injury_flag
+        description: "Boolean - true if incident resulted in injury."
+      - name: injury_count
+        description: "Integer version of injury_flag. Use SUM for injury rate calculations."
+      - name: preventable_flag
+        description: "Boolean - true if incident was deemed preventable."
+      - name: preventable_count
+        description: "Integer version of preventable_flag. Use SUM for preventable incident rate calculations."
+      - name: vehicle_damage_cost
+        description: "Cost of vehicle damage from this incident."
+      - name: cargo_damage_cost
+        description: "Cost of cargo damage from this incident."
+      - name: claim_amount
+        description: "Insurance claim amount filed for this incident."
+      - name: total_damage_cost
+        description: "Total damage = vehicle_damage_cost + cargo_damage_cost."

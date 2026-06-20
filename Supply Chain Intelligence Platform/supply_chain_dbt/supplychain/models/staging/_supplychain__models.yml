@@ -1,0 +1,266 @@
+version: 2
+
+models:
+  - name: stg_customers
+    description: "One row per customer account, including contract and credit terms."
+    columns:
+      - name: customer_id
+        description: "Primary key - unique identifier for each customer."
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_drivers
+    description: "One row per driver, including license and employment details."
+    columns:
+      - name: driver_id
+        description: "Primary key - unique identifier for each driver."
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_trucks
+    description: "One row per truck in the fleet, including specs and acquisition details."
+    columns:
+      - name: truck_id
+        description: "Primary key - unique identifier for each truck."
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_trailers
+    description: "One row per trailer in the fleet."
+    columns:
+      - name: trailer_id
+        description: "Primary key - unique identifier for each trailer."
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_facilities
+    description: "One row per facility (warehouse, distribution center, etc.), including location and capacity."
+    columns:
+      - name: facility_id
+        description: "Primary key - unique identifier for each facility."
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_routes
+    description: "One row per defined route, including origin/destination and base rates."
+    columns:
+      - name: route_id
+        description: "Primary key - unique identifier for each route."
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_loads
+    description: "One row per freight load booked by a customer."
+    columns:
+      - name: load_id
+        description: "Primary key - unique identifier for each load."
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: "Foreign key to stg_customers."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+      - name: route_id
+        description: "Foreign key to stg_routes."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_routes')
+              field: route_id
+
+  - name: stg_trips
+    description: "One row per trip executed to fulfill a load."
+    columns:
+      - name: trip_id
+        description: "Primary key - unique identifier for each trip."
+        tests:
+          - unique
+          - not_null
+      - name: load_id
+        description: "Foreign key to stg_loads."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_loads')
+              field: load_id
+      - name: driver_id
+        description: "Foreign key to stg_drivers. Nullable - ~1,700 completed trips missing driver assignment in source system."
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - relationships:
+              to: ref('stg_drivers')
+              field: driver_id
+      - name: truck_id
+        description: "Foreign key to stg_trucks. Nullable - ~1,600 completed trips missing truck assignment in source system."
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - relationships:
+              to: ref('stg_trucks')
+              field: truck_id
+      - name: trailer_id
+        description: "Foreign key to stg_trailers. Nullable - ~1,600 completed trips missing trailer assignment in source system."
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - relationships:
+              to: ref('stg_trailers')
+              field: trailer_id
+
+  - name: stg_fuel_purchases
+    description: "One row per fuel purchase transaction."
+    columns:
+      - name: fuel_purchase_id
+        description: "Primary key - unique identifier for each fuel purchase."
+        tests:
+          - unique
+          - not_null
+      - name: trip_id
+        description: "Foreign key to stg_trips."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_trips')
+              field: trip_id
+      - name: truck_id
+        description: "Foreign key to stg_trucks. Nullable - ~3,880 purchases not linked to a truck in source system."
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - relationships:
+              to: ref('stg_trucks')
+              field: truck_id
+      - name: driver_id
+        description: "Foreign key to stg_drivers. Nullable - ~3,988 purchases not linked to a driver in source system."
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - relationships:
+              to: ref('stg_drivers')
+              field: driver_id
+
+  - name: stg_delivery_events
+    description: "One row per pickup or delivery event tied to a load and trip."
+    columns:
+      - name: event_id
+        description: "Primary key - unique identifier for each delivery event."
+        tests:
+          - unique
+          - not_null
+      - name: load_id
+        description: "Foreign key to stg_loads."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_loads')
+              field: load_id
+      - name: trip_id
+        description: "Foreign key to stg_trips."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_trips')
+              field: trip_id
+      - name: facility_id
+        description: "Foreign key to stg_facilities."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_facilities')
+              field: facility_id
+
+  - name: stg_safety_incidents
+    description: "One row per safety incident involving a trip, truck, and driver."
+    columns:
+      - name: incident_id
+        description: "Primary key - unique identifier for each safety incident."
+        tests:
+          - unique
+          - not_null
+      - name: trip_id
+        description: "Foreign key to stg_trips."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_trips')
+              field: trip_id
+      - name: truck_id
+        description: "Foreign key to stg_trucks. One incident missing truck assignment."
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - relationships:
+              to: ref('stg_trucks')
+              field: truck_id
+      - name: driver_id
+        description: "Foreign key to stg_drivers. One incident missing driver assignment."
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - relationships:
+              to: ref('stg_drivers')
+              field: driver_id
+              
+  - name: stg_maintenance_records
+    description: "One row per maintenance event performed on a truck."
+    columns:
+      - name: maintenance_id
+        description: "Primary key - unique identifier for each maintenance record."
+        tests:
+          - unique
+          - not_null
+      - name: truck_id
+        description: "Foreign key to stg_trucks."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_trucks')
+              field: truck_id
+
+  - name: stg_truck_utilization_metrics
+    description: "One row per truck per month, with aggregated utilization, revenue, and maintenance metrics."
+    columns:
+      - name: truck_id
+        description: "Foreign key to stg_trucks. Combined with month, forms a unique key for this table."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_trucks')
+              field: truck_id
+      - name: month
+        description: "First day of the month that this row's metrics apply to."
+        tests:
+          - not_null
+
+  - name: stg_driver_monthly_metrics
+    description: "One row per driver per month, with aggregated trip, mileage, and on-time performance metrics."
+    columns:
+      - name: driver_id
+        description: "Foreign key to stg_drivers. Combined with month, forms a unique key for this table."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_drivers')
+              field: driver_id
+      - name: month
+        description: "First day of the month that this row's metrics apply to."
+        tests:
+          - not_null

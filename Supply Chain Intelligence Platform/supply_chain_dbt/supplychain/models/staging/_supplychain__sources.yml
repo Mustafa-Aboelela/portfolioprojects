@@ -1,0 +1,35 @@
+version: 2
+
+sources:
+  - name: supplychain
+    database: SUPPLY_CHAIN_DWH
+    schema: RAW
+    tables:
+      - name: customers
+        identifier: RAW_CUSTOMERS
+      - name: drivers
+        identifier: RAW_DRIVERS
+      - name: trucks
+        identifier: RAW_TRUCKS
+      - name: trailers
+        identifier: RAW_TRAILERS
+      - name: facilities
+        identifier: RAW_FACILITIES
+      - name: routes
+        identifier: RAW_ROUTES
+      - name: loads
+        identifier: RAW_LOADS
+      - name: trips
+        identifier: RAW_TRIPS
+      - name: fuel_purchases
+        identifier: RAW_FUEL_PURCHASES
+      - name: delivery_events
+        identifier: RAW_DELIVERY_EVENTS
+      - name: safety_incidents
+        identifier: RAW_SAFETY_INCIDENTS
+      - name: maintenance_records
+        identifier: RAW_MAINTENANCE_RECORDS
+      - name: truck_utilization_metrics
+        identifier: RAW_TRUCK_UTILIZATION_METRICS
+      - name: driver_monthly_metrics
+        identifier: RAW_DRIVER_MONTHLY_METRICS
